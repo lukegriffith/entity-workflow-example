@@ -7,7 +7,7 @@ import (
 
 	"go.temporal.io/sdk/client"
 
-	workflows "github.com/lukegriffith/entity-workflow-example" // Update with your actual module path.
+	"github.com/lukegriffith/entity-workflow-example/workflows" // Update with your actual module path.
 )
 
 func main() {
