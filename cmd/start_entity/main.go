@@ -49,15 +49,6 @@ func main() {
 
 	// For demonstration, wait 15 seconds before sending a signal.
 	time.Sleep(15 * time.Second)
-
-	// Send a signal to update the workflow's state.
-	err = c.SignalWorkflow(context.Background(), we.GetID(), we.GetRunID(), "updateState", "new state value")
-	if err != nil {
-		fmt.Println("Error sending updateState signal", err)
-	} else {
-		fmt.Println("Sent updateState signal")
-	}
-
 	// Optionally, send a shutdown signal to stop the workflow gracefully.
 	// Uncomment the following block to send the shutdown signal.
 	/*

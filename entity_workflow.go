@@ -7,50 +7,77 @@ import (
 	"go.temporal.io/sdk/workflow"
 )
 
-// EntityWorkflow is a long-running workflow that maintains internal state.
-// It listens for signals to update its state or shut itself down.
+// EntityWorkflow represents a long-running workflow that maintains state.
 func EntityWorkflow(ctx workflow.Context) error {
 	logger := workflow.GetLogger(ctx)
-
-	// Initialize internal state.
 	state := "initial"
 	shutdownRequested := false
 
-	// Obtain signal channels.
+	// Signal channels.
 	updateStateCh := workflow.GetSignalChannel(ctx, "updateState")
 	shutdownCh := workflow.GetSignalChannel(ctx, "shutdown")
 
+	// For sending a response back to a caller, we assume the caller
+	// passed its workflow ID (and optionally runID) along with the update signal.
+	var callerWorkflowID string
+
 	// Run indefinitely until a shutdown signal is received.
 	for !shutdownRequested {
-		// Create a selector to wait concurrently on timer and signals.
 		selector := workflow.NewSelector(ctx)
 
-		// Signal handler for updating state.
+		// Handle updateState signal.
 		selector.AddReceive(updateStateCh, func(c workflow.ReceiveChannel, more bool) {
-			var newState string
-			c.Receive(ctx, &newState)
-			state = newState
-			logger.Info("State updated", "state", state)
+			var signalData struct {
+				State    string
+				CallerID string
+				RunID    string
+			}
+			c.Receive(ctx, &signalData)
+			state = signalData.State
+			logger.Info("EntityWorkflow: State updated", "state", state)
+
+			// Optionally, if the update signal payload includes the caller's workflow ID,
+			// capture it here. For a simple example, we assume it's already set.
+			// In a real scenario, you might have a composite struct for the signal data.
+
+			// Send back a response signal to the caller.
+			// Ensure you have a valid callerWorkflowID (and optionally runID).
+
+			callerWorkflowID = signalData.CallerID
+
+			if callerWorkflowID != "" {
+				responseValue := "State updated to " + state
+				err := workflow.SignalExternalWorkflow(
+					ctx,
+					signalData.CallerID, // Caller workflow ID
+					signalData.RunID,    // Caller runID if known, or leave empty
+					"responseSignal",
+					responseValue,
+				).Get(ctx, nil)
+				if err != nil {
+					logger.Error("EntityWorkflow: Failed to signal caller", "Error", err)
+				} else {
+					logger.Info("EntityWorkflow: Response signal sent", "response", responseValue)
+				}
+			}
 		})
 
-		// Signal handler for shutdown.
+		// Handle shutdown signal.
 		selector.AddReceive(shutdownCh, func(c workflow.ReceiveChannel, more bool) {
-			// Consume the shutdown signal (data can be ignored).
 			var dummy string
 			c.Receive(ctx, &dummy)
-			logger.Info("Shutdown signal received")
+			logger.Info("EntityWorkflow: Shutdown signal received")
 			shutdownRequested = true
 		})
 
-		// Timer to simulate work and periodically log the state.
+		// Timer for periodic logging.
 		selector.AddFuture(workflow.NewTimer(ctx, 5*time.Second), func(f workflow.Future) {
-			logger.Info("Current state", "state", state)
+			logger.Info("EntityWorkflow: Current state", "state", state)
 		})
 
-		// Block until one of the events occurs.
 		selector.Select(ctx)
 	}
 
-	logger.Info("Workflow shutting down.")
+	logger.Info("EntityWorkflow: Workflow shutting down")
 	return nil
 }

@@ -13,8 +13,19 @@ func CallerWorkflow(ctx workflow.Context) error {
 	targetWorkflowID := "entity_workflow_id"
 	targetRunID := "" // If known, include the RunID; otherwise, it can be empty.
 
-	// Prepare the payload for the updateState signal.
-	signalData := "UpdatedState"
+	info := workflow.GetInfo(ctx)
+	callerWorkflowID := info.WorkflowExecution.ID
+	runID := info.WorkflowExecution.RunID
+
+	signalData := struct {
+		State    string
+		CallerID string
+		RunID    string
+	}{
+		"UpdatedState",
+		callerWorkflowID,
+		runID,
+	}
 	// Send the updateState signal to the target workflow.
 	err := workflow.SignalExternalWorkflow(
 		ctx,
@@ -30,9 +41,11 @@ func CallerWorkflow(ctx workflow.Context) error {
 	logger.Info("CallerWorkflow: updateState signal sent")
 
 	// Now, wait for a response signal.
+	logger.Info("WAITING FOR SIGNAL")
 	responseCh := workflow.GetSignalChannel(ctx, "responseSignal")
 	var response string
 	responseCh.Receive(ctx, &response)
+	logger.Info("SIGNAL RECIEVED")
 	logger.Info("CallerWorkflow: Received response", "response", response)
 
 	// Continue with additional processing if needed.
