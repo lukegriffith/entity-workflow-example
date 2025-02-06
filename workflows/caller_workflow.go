@@ -31,7 +31,7 @@ func CallerWorkflow(ctx workflow.Context) error {
 		ctx,
 		targetWorkflowID,
 		targetRunID,
-		"updateState",
+		"signal",
 		signalData,
 	).Get(ctx, nil)
 	if err != nil {
