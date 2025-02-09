@@ -6,11 +6,10 @@ import (
 )
 
 // CallerWorkflow sends an updateState signal to the TargetWorkflow and then waits for a response.
-func CallerWorkflow(ctx workflow.Context) error {
+func CallerWorkflow(ctx workflow.Context, targetWorkflowID string, data string) error {
 	logger := workflow.GetLogger(ctx)
 
 	// Define the target workflow's IDs.
-	targetWorkflowID := "entity_workflow_id"
 	targetRunID := "" // If known, include the RunID; otherwise, it can be empty.
 
 	info := workflow.GetInfo(ctx)
@@ -22,7 +21,7 @@ func CallerWorkflow(ctx workflow.Context) error {
 		CallerID string
 		RunID    string
 	}{
-		"UpdatedState",
+		data,
 		callerWorkflowID,
 		runID,
 	}
